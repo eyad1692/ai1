@@ -1,5 +1,4 @@
 const express = require("express");
-const nodemailer = require("nodemailer");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const multer = require("multer");
@@ -25,14 +24,6 @@ const upload = multer({ dest: "uploads/" });
 
 let codes = {}; // store verification codes
 
-// Setup Nodemailer
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER || "dummy@gmail.com",
-    pass: process.env.EMAIL_PASS || "dummy-pass",
-  },
-});
 
 // Send verification code
 app.post("/send-code", async (req, res) => {
@@ -44,21 +35,34 @@ app.post("/send-code", async (req, res) => {
 
   console.log(`Generated code for ${email}: ${code}`); // Helpful for testing without real email
 
-  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+  if (process.env.EMAILJS_SERVICE_ID) {
     try {
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: "Your Aether AI Verification Code",
-        text: `Your login code is: ${code}`,
+      const emailResponse = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          service_id: process.env.EMAILJS_SERVICE_ID,
+          template_id: process.env.EMAILJS_TEMPLATE_ID,
+          user_id: process.env.EMAILJS_PUBLIC_KEY,
+          accessToken: process.env.EMAILJS_PRIVATE_KEY,
+          template_params: {
+            to_email: email,
+            verification_code: code
+          }
+        })
       });
-      console.log("Email sent successfully");
+      
+      if (!emailResponse.ok) {
+        const errorText = await emailResponse.text();
+        console.error("EmailJS Error:", errorText);
+      } else {
+        console.log("Email sent successfully via EmailJS");
+      }
     } catch (err) {
-      console.error("Error sending email:", err);
-      // Even if email fails (wrong creds), we proceed so the user can test using the console code
+      console.error("Error sending email via EmailJS:", err);
     }
   } else {
-    console.log("Email not sent: EMAIL_USER and EMAIL_PASS not set in .env");
+    console.log("Email not sent: EmailJS keys not set in .env");
   }
 
   res.send({ success: true, message: "Code sent" });
