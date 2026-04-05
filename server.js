@@ -30,10 +30,12 @@ app.post("/send-code", async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).send({ success: false, error: "Email is required" });
 
+  const cleanEmail = email.trim();
   const code = Math.floor(100000 + Math.random() * 900000);
-  codes[email] = code;
+  codes[cleanEmail] = code;
 
-  console.log(`Generated code for ${email}: ${code}`); // Helpful for testing without real email
+  console.log(`Generated code for ${cleanEmail}: ${code}`);
+  console.log(`Sending EmailJS request to: ${cleanEmail} using template: ${process.env.EMAILJS_TEMPLATE_ID}`);
 
   if (process.env.EMAILJS_SERVICE_ID) {
     try {
@@ -46,12 +48,13 @@ app.post("/send-code", async (req, res) => {
           user_id: process.env.EMAILJS_PUBLIC_KEY,
           accessToken: process.env.EMAILJS_PRIVATE_KEY,
           template_params: {
-            to_email: email,
-            verification_code: code
+            to_email: cleanEmail,
+            passcode: code,
+            time: new Date(Date.now() + 15 * 60 * 1000).toLocaleTimeString() // Set to 15 mins from now
           }
         })
       });
-      
+
       if (!emailResponse.ok) {
         const errorText = await emailResponse.text();
         console.error("EmailJS Error:", errorText);
@@ -71,9 +74,10 @@ app.post("/send-code", async (req, res) => {
 // Verify code
 app.post("/verify-code", (req, res) => {
   const { email, code } = req.body;
+  const cleanEmail = email ? email.trim() : "";
 
-  if (codes[email] && codes[email].toString() === code.toString()) {
-    delete codes[email]; // Clear code after use
+  if (codes[cleanEmail] && codes[cleanEmail].toString() === code.toString()) {
+    delete codes[cleanEmail]; // Clear code after use
     res.send({ success: true });
   } else {
     res.send({ success: false, error: "Invalid code" });
@@ -111,7 +115,7 @@ app.post("/upload", upload.single("file"), async (req, res) => {
 
     const fileName = req.file.originalname;
     const fileText = `Simulated content for ${fileName}`; // For a real app, read file and parse text (e.g., pdf-parse, fs.readFileSync)
-    
+
     if (openai.apiKey === "dummy-key-for-now" || !process.env.OPENAI_API_KEY) {
       return res.send({ analysis: `File "${fileName}" uploaded successfully. (Analysis simulated because OpenAI API key is missing)` });
     }
