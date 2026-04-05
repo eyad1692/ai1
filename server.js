@@ -14,9 +14,10 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, "../frontend"))); // Serve frontend files
 
-// Setup OpenAI
+// Setup Groq (Free alternative using the same OpenAI library)
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "dummy-key-for-now", // Allow starting without key
+  apiKey: process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY || "dummy-key-for-now",
+  baseURL: "https://api.groq.com/openai/v1"
 });
 
 // Setup Multer for file uploads
@@ -86,7 +87,7 @@ app.post("/chat", async (req, res) => {
     }
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "llama3-8b-8192",
       messages: [{ role: "user", content: message }],
     });
 
@@ -112,7 +113,7 @@ app.post("/upload", upload.single("file"), async (req, res) => {
     }
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "llama3-8b-8192",
       messages: [
         { role: "user", content: "Briefly summarize or analyze the following content/file name context: " + fileText }
       ],
