@@ -87,7 +87,7 @@ app.post("/chat", async (req, res) => {
     }
 
     const response = await openai.chat.completions.create({
-      model: "llama3-8b-8192",
+      model: "llama-3.1-8b-instant",
       messages: [{ role: "user", content: message }],
     });
 
@@ -113,7 +113,7 @@ app.post("/upload", upload.single("file"), async (req, res) => {
     }
 
     const response = await openai.chat.completions.create({
-      model: "llama3-8b-8192",
+      model: "llama-3.1-8b-instant",
       messages: [
         { role: "user", content: "Briefly summarize or analyze the following content/file name context: " + fileText }
       ],
