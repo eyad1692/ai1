@@ -4,19 +4,23 @@ const cors = require("cors");
 const multer = require("multer");
 const { OpenAI } = require("openai");
 const path = require("path");
+const fs = require("fs");
 require("dotenv").config();
 
 const app = express();
+const featuresRouter = require("./features"); // Import the modular features
 
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, "../frontend"))); // Serve frontend files
 
-// Setup Groq (Free alternative using the same OpenAI library)
+// Use the separate features file for Google, Mic, Image, and File generation
+app.use("/", featuresRouter);
+
+// Setup OpenAI for remaining chat/upload features
 const openai = new OpenAI({
-  apiKey: process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY || "dummy-key-for-now",
-  baseURL: "https://api.groq.com/openai/v1"
+  apiKey: process.env.OPENAI_API_KEY || "dummy-key-for-now"
 });
 
 // Setup Multer for file uploads
@@ -35,8 +39,7 @@ app.post("/send-code", async (req, res) => {
   codes[cleanEmail] = code;
 
   console.log(`Generated code for ${cleanEmail}: ${code}`);
-  console.log(`Sending EmailJS request to: ${cleanEmail} using template: ${process.env.EMAILJS_TEMPLATE_ID}`);
-
+  
   if (process.env.EMAILJS_SERVICE_ID) {
     try {
       const emailResponse = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
@@ -50,7 +53,7 @@ app.post("/send-code", async (req, res) => {
           template_params: {
             to_email: cleanEmail,
             passcode: code,
-            time: new Date(Date.now() + 15 * 60 * 1000).toLocaleTimeString() // Set to 15 mins from now
+            time: new Date(Date.now() + 15 * 60 * 1000).toLocaleTimeString()
           }
         })
       });
@@ -58,14 +61,10 @@ app.post("/send-code", async (req, res) => {
       if (!emailResponse.ok) {
         const errorText = await emailResponse.text();
         console.error("EmailJS Error:", errorText);
-      } else {
-        console.log("Email sent successfully via EmailJS");
       }
     } catch (err) {
       console.error("Error sending email via EmailJS:", err);
     }
-  } else {
-    console.log("Email not sent: EmailJS keys not set in .env");
   }
 
   res.send({ success: true, message: "Code sent" });
@@ -90,12 +89,12 @@ app.post("/chat", async (req, res) => {
     const { message } = req.body;
     if (!message) return res.status(400).send({ error: "Message is required" });
 
-    if (openai.apiKey === "dummy-key-for-now" || !process.env.OPENAI_API_KEY) {
+    if (openai.apiKey === "dummy-key-for-now") {
       return res.send({ reply: "I am a simulated AI. Please add an OPENAI_API_KEY to your .env to enable real AI responses!" });
     }
 
     const response = await openai.chat.completions.create({
-      model: "llama-3.1-8b-instant",
+      model: "gpt-4o",
       messages: [{ role: "user", content: message }],
     });
 
@@ -114,16 +113,16 @@ app.post("/upload", upload.single("file"), async (req, res) => {
     }
 
     const fileName = req.file.originalname;
-    const fileText = `Simulated content for ${fileName}`; // For a real app, read file and parse text (e.g., pdf-parse, fs.readFileSync)
+    const fileText = `Simulated content for ${fileName}`;
 
-    if (openai.apiKey === "dummy-key-for-now" || !process.env.OPENAI_API_KEY) {
+    if (openai.apiKey === "dummy-key-for-now") {
       return res.send({ analysis: `File "${fileName}" uploaded successfully. (Analysis simulated because OpenAI API key is missing)` });
     }
 
     const response = await openai.chat.completions.create({
-      model: "llama-3.1-8b-instant",
+      model: "gpt-4o",
       messages: [
-        { role: "user", content: "Briefly summarize or analyze the following content/file name context: " + fileText }
+        { role: "user", content: "Briefly summarize or analyze the following content: " + fileText }
       ],
     });
 
