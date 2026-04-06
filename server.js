@@ -18,9 +18,10 @@ app.use(express.static(path.join(__dirname, "../frontend"))); // Serve frontend 
 // Use the separate features file for Google, Mic, Image, and File generation
 app.use("/", featuresRouter);
 
-// Setup OpenAI for remaining chat/upload features
+// Setup OpenAI with Groq fallback
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "dummy-key-for-now"
+  apiKey: process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY || "dummy-key-for-now",
+  baseURL: process.env.GROQ_API_KEY ? "https://api.groq.com/openai/v1" : undefined
 });
 
 // Setup Multer for file uploads
@@ -94,7 +95,7 @@ app.post("/chat", async (req, res) => {
     }
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: process.env.GROQ_API_KEY ? "llama3-8b-8192" : "gpt-4o-mini", // Use most compatible Groq model
       messages: [{ role: "user", content: message }],
     });
 
@@ -120,7 +121,7 @@ app.post("/upload", upload.single("file"), async (req, res) => {
     }
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: process.env.GROQ_API_KEY ? "llama3-8b-8192" : "gpt-4o-mini",
       messages: [
         { role: "user", content: "Briefly summarize or analyze the following content: " + fileText }
       ],
