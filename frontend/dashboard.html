@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thinker AI - Advanced Workspace</title>
+  <meta name="description" content="Thinker AI Platform Dashboard">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+  <main class="dashboard-container">
+    <!-- Sidebar -->
+    <aside class="sidebar glass">
+      <div class="brand">
+        <div class="brand-icon"><i class="fas fa-brain"></i></div>
+        Thinker
+      </div>
+
+      <button class="new-chat-btn" onclick="startNewChat()">
+        <i class="fas fa-plus"></i> New Chat
+      </button>
+
+      <div class="history-section" id="chatHistory">
+        <!-- History items will be injected here -->
+        <div class="history-item active">
+          <i class="far fa-message"></i> Welcome to Thinker
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="nav-link" onclick="switchView('templates')">
+          <i class="fas fa-th-large"></i> Templates
+        </div>
+        <div class="nav-link" onclick="switchView('settings')">
+          <i class="fas fa-cog"></i> Settings
+        </div>
+        
+        <div class="user-profile">
+          <div class="avatar" id="userAvatar">U</div>
+          <div class="user-info">
+            <span class="user-name" id="userName">User Name</span>
+            <span class="user-email" id="userEmail">user@example.com</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Workspace -->
+    <section class="main-content glass">
+      
+      <!-- Chat View -->
+      <div id="chatView" class="view active">
+        <header class="view-header">
+          <div class="view-title">
+            <h2 id="chatTitle">AI Assistant</h2>
+          </div>
+          <div class="header-actions">
+            <!-- Optional: Share, Export, etc. -->
+          </div>
+        </header>
+
+        <div class="chat-window" id="chatDisplay">
+          <div class="message ai">
+            Hello! I am Thinker AI. How can I assist you with your creative or technical tasks today?
+          </div>
+        </div>
+
+        <form class="input-area-wrapper" onsubmit="event.preventDefault(); sendMessage();">
+          <div class="input-container">
+            <textarea id="messageInput" placeholder="Ask Thinker anything..." rows="1" oninput="autoResize(this)"></textarea>
+            <div class="input-actions">
+              <button type="button" class="icon-btn" id="micBtn" onclick="toggleMic()" title="Voice Input">
+                <i class="fas fa-microphone"></i>
+              </button>
+              <button type="button" class="icon-btn" onclick="switchView('templates')" title="Templates">
+                <i class="fas fa-wand-magic-sparkles"></i>
+              </button>
+              <button type="submit" class="icon-btn primary" id="sendBtn">
+                <i class="fas fa-paper-plane"></i>
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Templates View -->
+      <div id="templatesView" class="view">
+        <header class="view-header">
+          <div class="view-title">
+            <h2>AI Templates</h2>
+          </div>
+          <button class="icon-btn" onclick="switchView('chat')"><i class="fas fa-times"></i></button>
+        </header>
+        
+        <div class="templates-grid">
+          <div class="template-card" onclick="useTemplate('code')">
+            <div class="template-icon"><i class="fas fa-code"></i></div>
+            <h3>Code Assistant</h3>
+            <p>Debug, optimize, or write clean code in any language.</p>
+          </div>
+          <div class="template-card" onclick="useTemplate('write')">
+            <div class="template-icon"><i class="fas fa-pen-nib"></i></div>
+            <h3>Content Writer</h3>
+            <p>Generate high-quality blogs, articles, or social media posts.</p>
+          </div>
+          <div class="template-card" onclick="useTemplate('image')">
+            <div class="template-icon"><i class="fas fa-image"></i></div>
+            <h3>Image Prompt Gen</h3>
+            <p>Craft detailed prompts for Midjourney or DALL-E.</p>
+          </div>
+          <div class="template-card" onclick="useTemplate('email')">
+            <div class="template-icon"><i class="fas fa-envelope"></i></div>
+            <h3>Email Drafter</h3>
+            <p>Professional emails tailored to your specific audience.</p>
+          </div>
+          <div class="template-card" onclick="useTemplate('research')">
+            <div class="template-icon"><i class="fas fa-microscope"></i></div>
+            <h3>AI Researcher</h3>
+            <p>Summarize complex topics or dense documents into simple explanations.</p>
+          </div>
+          <div class="template-card" onclick="useTemplate('social')">
+            <div class="template-icon"><i class="fab fa-twitter"></i></div>
+            <h3>Social Strategist</h3>
+            <p>Generate viral posts for LinkedIn, Twitter, and Instagram.</p>
+          </div>
+          <div class="template-card" onclick="useTemplate('interview')">
+            <div class="template-icon"><i class="fas fa-user-tie"></i></div>
+            <h3>Interview Coach</h3>
+            <p>Ready to roleplay? Practice with job-specific interview questions.</p>
+          </div>
+          <div class="template-card" onclick="useTemplate('data')">
+            <div class="template-icon"><i class="fas fa-chart-line"></i></div>
+            <h3>Data Analyst</h3>
+            <p>Write complex SQL queries, Excel formulas, or Python data scripts.</p>
+          </div>
+          <div class="template-card" onclick="useTemplate('translate')">
+            <div class="template-icon"><i class="fas fa-language"></i></div>
+            <h3>Language Translator</h3>
+            <p>Translate text into any language while maintaining tone and style.</p>
+          </div>
+          <div class="template-card" onclick="useTemplate('legal')">
+            <div class="template-icon"><i class="fas fa-gavel"></i></div>
+            <h3>Legal Summarizer</h3>
+            <p>Summarize legal documents and highlight key obligations and risks.</p>
+          </div>
+          <div class="template-card" onclick="useTemplate('travel')">
+            <div class="template-icon"><i class="fas fa-map-marked-alt"></i></div>
+            <h3>Travel Planner</h3>
+            <p>Get a detailed itinerary and budget for your next adventure.</p>
+          </div>
+          <div class="template-card" onclick="useTemplate('productivity')">
+            <div class="template-icon"><i class="fas fa-list-check"></i></div>
+            <h3>Productivity Pro</h3>
+            <p>Optimize your schedule using the Eisenhower Matrix and time-blocking.</p>
+          </div>
+          <div class="template-card" onclick="useTemplate('story')">
+            <div class="template-icon"><i class="fas fa-book"></i></div>
+            <h3>Storyteller</h3>
+            <p>Craft compelling short stories with vivid descriptions and depth.</p>
+          </div>
+          <div class="template-card" onclick="useTemplate('marketing')">
+            <div class="template-icon"><i class="fas fa-bullhorn"></i></div>
+            <h3>Marketing Scout</h3>
+            <p>Develop comprehensive marketing plans and SEO strategies.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings View -->
+      <div id="settingsView" class="view">
+        <header class="view-header">
+          <div class="view-title">
+            <h2>Settings</h2>
+          </div>
+          <button class="icon-btn" onclick="switchView('chat')"><i class="fas fa-times"></i></button>
+        </header>
+
+        <div class="settings-container">
+          <div class="settings-group">
+            <h3>Account</h3>
+            <div class="setting-item">
+              <div class="setting-info">
+                <h4>Display Name</h4>
+                <p>Change how Thinker addresses you</p>
+              </div>
+              <input type="text" id="settingName" placeholder="Enter name..." style="width: 200px">
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <h3>Appearance</h3>
+            <div class="setting-item">
+              <div class="setting-info">
+                <h4>Theme</h4>
+                <p>Switch between dark and light modes</p>
+              </div>
+              <select id="themeSelect" onchange="applyTheme(this.value)">
+                <option value="dark">Default Dark Theme</option>
+                <option value="light">Classic Light Mode</option>
+                <option value="midnight">Pure Black Theme (OLED)</option>
+                <option value="emerald">Emerald Green Theme</option>
+                <option value="cyber">Deep Cyber Blue Theme</option>
+                <option value="sunset">Neon Sunset (Purple/Pink)</option>
+                <option value="lunar">High Contrast Slate Gray</option>
+                <option value="crimson">Crimson Abyss (Bold Red)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <h3>History</h3>
+            <div class="setting-item">
+              <div class="setting-info">
+                <h4>Clear All Chats</h4>
+                <p>Permanently delete your conversation history</p>
+              </div>
+              <button class="icon-btn" style="color: var(--error-color)" onclick="clearHistory()">
+                <i class="fas fa-trash-alt"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <h3>Templates</h3>
+            <div class="settings-list-scroll">
+              <div class="template-mini-item" onclick="useTemplate('code')">
+                <i class="fas fa-code"></i>
+                <div class="mini-info">
+                  <span>Code Assistant</span>
+                  <small>Debug & Optimize</small>
+                </div>
+              </div>
+              <div class="template-mini-item" onclick="useTemplate('translate')">
+                <i class="fas fa-language"></i>
+                <div class="mini-info">
+                  <span>Translator</span>
+                  <small>Multilingual Support</small>
+                </div>
+              </div>
+              <div class="template-mini-item" onclick="useTemplate('legal')">
+                <i class="fas fa-gavel"></i>
+                <div class="mini-info">
+                  <span>Legal Analyst</span>
+                  <small>Document Summary</small>
+                </div>
+              </div>
+              <div class="template-mini-item" onclick="useTemplate('travel')">
+                <i class="fas fa-map-marked-alt"></i>
+                <div class="mini-info">
+                  <span>Travel Planner</span>
+                  <small>Itineraries & Budget</small>
+                </div>
+              </div>
+              <div class="template-mini-item" onclick="useTemplate('productivity')">
+                <i class="fas fa-list-check"></i>
+                <div class="mini-info">
+                  <span>Productivity</span>
+                  <small>Task Management</small>
+                </div>
+              </div>
+              <div class="template-mini-item" onclick="useTemplate('story')">
+                <i class="fas fa-book"></i>
+                <div class="mini-info">
+                  <span>Creative Writer</span>
+                  <small>Deep Stories</small>
+                </div>
+              </div>
+              <div class="template-mini-item" onclick="useTemplate('marketing')">
+                <i class="fas fa-bullhorn"></i>
+                <div class="mini-info">
+                  <span>Marketing Scout</span>
+                  <small>Campaign Strategy</small>
+                </div>
+              </div>
+            </div>
+            <p class="settings-tip">Tip: Click a template to quickly apply its prompt to your chat.</p>
+          </div>
+          
+          <button class="primary" onclick="saveSettings()">Save Changes</button>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>
