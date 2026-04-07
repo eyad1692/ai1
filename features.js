@@ -6,10 +6,18 @@ const PDFDocument = require("pdfkit");
 const fs = require("fs");
 const path = require("path");
 
-// Setup OpenAI with Groq fallback
+// Setup AI Provider (OpenRouter, Groq, or OpenAI)
+const aiKey = process.env.OPENROUTER_API_KEY || process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY;
+const aiBaseUrl = process.env.OPENROUTER_API_KEY 
+  ? "https://openrouter.ai/api/v1" 
+  : (process.env.GROQ_API_KEY ? "https://api.groq.com/openai/v1" : undefined);
+
 const openai = new OpenAI({
-  apiKey: process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY || "dummy-key-for-now",
-  baseURL: process.env.GROQ_API_KEY ? "https://api.groq.com/openai/v1" : undefined
+  apiKey: aiKey || "dummy-key-for-now",
+  baseURL: aiBaseUrl,
+  defaultHeaders: process.env.OPENROUTER_API_KEY ? {
+    "X-Title": "Thinker AI"
+  } : {}
 });
 
 // Setup Multer for file / audio uploads

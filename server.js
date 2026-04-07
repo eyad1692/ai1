@@ -18,11 +18,19 @@ app.use(express.static(path.join(__dirname, "../frontend"))); // Serve frontend 
 // Use the separate features file for Google, Mic, Image, and File generation
 app.use("/", featuresRouter);
 
-// Setup Groq as the primary AI provider (Zero Cost)
-const apiKey = process.env.GROQ_API_KEY;
+// Setup AI Provider (OpenRouter, Groq, or OpenAI)
+const aiKey = process.env.OPENROUTER_API_KEY || process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY;
+const aiBaseUrl = process.env.OPENROUTER_API_KEY 
+  ? "https://openrouter.ai/api/v1" 
+  : (process.env.GROQ_API_KEY ? "https://api.groq.com/openai/v1" : undefined);
+
 const openai = new OpenAI({
-  apiKey: apiKey || "dummy-key-for-now",
-  baseURL: "https://api.groq.com/openai/v1"
+  apiKey: aiKey || "dummy-key-for-now",
+  baseURL: aiBaseUrl,
+  defaultHeaders: process.env.OPENROUTER_API_KEY ? {
+    "HTTP-Referer": "https://thinker-ai.netlify.app", // Optional for OpenRouter
+    "X-Title": "Thinker AI"
+  } : {}
 });
 
 // Setup Multer for file uploads
@@ -91,13 +99,17 @@ app.post("/chat", async (req, res) => {
     const { message } = req.body;
     if (!message) return res.status(400).send({ error: "Message is required" });
 
-    // Ensure Groq is configured
-    if (!process.env.GROQ_API_KEY && openai.apiKey === "dummy-key-for-now") {
-      return res.send({ reply: "I am a simulated AI. Please add a GROQ_API_KEY to your .env to enable real, 100% FREE high-speed responses!" });
+    // Dynamic Model Selection
+    let modelName = process.env.AI_MODEL || "gpt-4o-mini"; 
+    
+    // Fallback logic if AI_MODEL is not set
+    if (!process.env.AI_MODEL) {
+        if (process.env.OPENROUTER_API_KEY) modelName = "meta-llama/llama-3-8b-instruct:free";
+        else if (process.env.GROQ_API_KEY) modelName = "llama3-8b-8192";
     }
 
     const response = await openai.chat.completions.create({
-      model: "llama3-8b-8192", // Use Groq's best free model
+      model: modelName,
       messages: [{ role: "user", content: message }],
     });
 
