@@ -2,7 +2,6 @@ const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const { OpenAI } = require("openai");
-const { OAuth2Client } = require("google-auth-library");
 const PDFDocument = require("pdfkit");
 const fs = require("fs");
 const path = require("path");
@@ -12,6 +11,9 @@ const openai = new OpenAI({
   apiKey: process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY || "dummy-key-for-now",
   baseURL: process.env.GROQ_API_KEY ? "https://api.groq.com/openai/v1" : undefined
 });
+
+// Setup Multer for file / audio uploads
+const upload = multer({ dest: "uploads/" });
 
 // 1. Audio Transcription (Whisper)
 router.post("/transcribe", upload.single("audio"), async (req, res) => {
