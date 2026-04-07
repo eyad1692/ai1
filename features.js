@@ -13,31 +13,7 @@ const openai = new OpenAI({
   baseURL: process.env.GROQ_API_KEY ? "https://api.groq.com/openai/v1" : undefined
 });
 
-// Setup Google OAuth Client
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
-// Setup Multer for file / audio uploads
-const upload = multer({ dest: "uploads/" });
-
-// 1. Google Sign-In verification
-router.post("/google-auth", async (req, res) => {
-  const { idToken } = req.body;
-  if (!idToken) return res.status(400).send({ success: false, error: "ID Token is required" });
-
-  try {
-    const ticket = await client.verifyIdToken({
-      idToken: idToken,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-    const payload = ticket.getPayload();
-    res.send({ success: true, user: { email: payload.email, name: payload.name } });
-  } catch (error) {
-    console.error("Google Auth error:", error);
-    res.status(401).send({ success: false, error: "Invalid ID Token" });
-  }
-});
-
-// 2. Audio Transcription (Whisper)
+// 1. Audio Transcription (Whisper)
 router.post("/transcribe", upload.single("audio"), async (req, res) => {
   try {
     if (!req.file) {
@@ -60,24 +36,18 @@ router.post("/transcribe", upload.single("audio"), async (req, res) => {
   }
 });
 
-// 3. AI Image Generation
+// 3. AI Image Generation (Pollinations AI - 100% Free, No Key)
 router.post("/generate-image", async (req, res) => {
   const { prompt } = req.body;
   if (!prompt) return res.status(400).send({ error: "Prompt is required" });
 
   try {
-    if (openai.apiKey === "dummy-key-for-now") {
-      return res.send({ imageUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?ixlib=rb-1.2.1&auto=format&fit=crop&w=1064&q=80" });
-    }
-
-    const response = await openai.images.generate({
-      model: "dall-e-3",
-      prompt: prompt,
-      n: 1,
-      size: "1024x1024",
-    });
-
-    res.send({ imageUrl: response.data[0].url });
+    // Clean the prompt for the URL
+    const cleanPrompt = encodeURIComponent(prompt.substring(0, 200));
+    const imageUrl = `https://pollinations.ai/p/${cleanPrompt}?width=1024&height=1024&seed=${Math.floor(Math.random() * 1000000)}&nologo=true`;
+    
+    // We append a seed to ensure uniqueness for each request
+    res.send({ imageUrl: imageUrl });
   } catch (err) {
     console.error("Image generation error:", err);
     res.status(500).send({ error: "Image generation failed" });

@@ -18,10 +18,11 @@ app.use(express.static(path.join(__dirname, "../frontend"))); // Serve frontend 
 // Use the separate features file for Google, Mic, Image, and File generation
 app.use("/", featuresRouter);
 
-// Setup OpenAI with Groq fallback
+// Setup Groq as the primary AI provider (Zero Cost)
+const apiKey = process.env.GROQ_API_KEY;
 const openai = new OpenAI({
-  apiKey: process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY || "dummy-key-for-now",
-  baseURL: process.env.GROQ_API_KEY ? "https://api.groq.com/openai/v1" : undefined
+  apiKey: apiKey || "dummy-key-for-now",
+  baseURL: "https://api.groq.com/openai/v1"
 });
 
 // Setup Multer for file uploads
@@ -90,12 +91,13 @@ app.post("/chat", async (req, res) => {
     const { message } = req.body;
     if (!message) return res.status(400).send({ error: "Message is required" });
 
-    if (openai.apiKey === "dummy-key-for-now") {
-      return res.send({ reply: "I am a simulated AI. Please add an OPENAI_API_KEY to your .env to enable real AI responses!" });
+    // Ensure Groq is configured
+    if (!process.env.GROQ_API_KEY && openai.apiKey === "dummy-key-for-now") {
+      return res.send({ reply: "I am a simulated AI. Please add a GROQ_API_KEY to your .env to enable real, 100% FREE high-speed responses!" });
     }
 
     const response = await openai.chat.completions.create({
-      model: process.env.GROQ_API_KEY ? "llama3-8b-8192" : "gpt-4o-mini", // Use most compatible Groq model
+      model: "llama3-8b-8192", // Use Groq's best free model
       messages: [{ role: "user", content: message }],
     });
 
