@@ -58,13 +58,13 @@ router.post("/generate-image", async (req, res) => {
 
   try {
     const hfResponse = await fetch(
-      "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell",
+      "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0",
       {
         method: "POST",
         headers: {
           Authorization: `Bearer ${hfKey}`,
           "Content-Type": "application/json",
-          "x-wait-for-model": "true"   // Tell HF to wait for model to load
+          "x-wait-for-model": "true"
         },
         body: JSON.stringify({ inputs: prompt }),
       }
