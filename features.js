@@ -46,21 +46,56 @@ router.post("/transcribe", upload.single("audio"), async (req, res) => {
   }
 });
 
-// 3. AI Image Generation (Pollinations AI - 100% Free, No Key)
+// 3. AI Image Generation (HuggingFace FLUX)
 router.post("/generate-image", async (req, res) => {
   const { prompt } = req.body;
   if (!prompt) return res.status(400).send({ error: "Prompt is required" });
 
+  const hfKey = process.env.HF_API_KEY;
+  if (!hfKey) {
+    return res.status(500).send({ error: "HF_API_KEY is not set in environment variables." });
+  }
+
   try {
-    // Clean the prompt for the URL
-    const cleanPrompt = encodeURIComponent(prompt.substring(0, 200));
-    const imageUrl = `https://pollinations.ai/p/${cleanPrompt}?width=1024&height=1024&seed=${Math.floor(Math.random() * 1000000)}&nologo=true`;
-    
-    // We append a seed to ensure uniqueness for each request
-    res.send({ imageUrl: imageUrl });
+    const hfResponse = await fetch(
+      "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${hfKey}`,
+          "Content-Type": "application/json",
+          "x-wait-for-model": "true"   // Tell HF to wait for model to load
+        },
+        body: JSON.stringify({ inputs: prompt }),
+      }
+    );
+
+    // Check if model is still loading
+    if (hfResponse.status === 503) {
+      const errData = await hfResponse.json().catch(() => ({}));
+      const waitTime = errData.estimated_time || 30;
+      console.log(`HuggingFace model loading, estimated wait: ${waitTime}s`);
+      return res.status(503).send({ 
+        error: `The image model is warming up. Please try again in ${Math.ceil(waitTime)} seconds.` 
+      });
+    }
+
+    if (!hfResponse.ok) {
+      const errText = await hfResponse.text();
+      console.error("HuggingFace Error:", errText);
+      return res.status(500).send({ error: "Image generation failed. Please try again." });
+    }
+
+    // Convert binary image to base64 data URL
+    const imageBuffer = await hfResponse.arrayBuffer();
+    const base64Image = Buffer.from(imageBuffer).toString("base64");
+    const imageUrl = `data:image/jpeg;base64,${base64Image}`;
+
+    res.send({ imageUrl });
+
   } catch (err) {
     console.error("Image generation error:", err);
-    res.status(500).send({ error: "Image generation failed" });
+    res.status(500).send({ error: "Image generation failed. Please try again." });
   }
 });
 
