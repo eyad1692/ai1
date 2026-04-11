@@ -39,17 +39,7 @@ const upload = multer({ dest: "uploads/" });
 let codes = {}; // store verification codes
 let userSubscriptions = {}; // { email: planName }
 let userUsage = {}; // { email: { count: number, date: string } }
-
-// Mock Database of Registered Users (to simulate being able to add team members)
-const mockUsers = [
-    { email: "john@example.com", name: "John Doe" },
-    { email: "sarah@design.co", name: "Sarah Smith" },
-    { email: "mike.dev@startup.io", name: "Mike Johnson" },
-    { email: "alex@agency.net", name: "Alex Wong" },
-    { email: "emma.marketing@corp.com", name: "Emma Davis" },
-    { email: "dave.ops@tech.io", name: "David Miller" },
-    { email: "olivia.hr@company.com", name: "Olivia Wilson" }
-];
+let registeredUsers = {}; // { email: { name: string, email: string, joinedAt: Date } }
 
 // Helper function to check and update daily limits
 function checkLimit(email, plan) {
@@ -132,6 +122,12 @@ app.post("/verify-code", (req, res) => {
 
   if (codes[cleanEmail] && codes[cleanEmail].toString() === code.toString()) {
     delete codes[cleanEmail]; // Clear code after use
+    
+    // Auto-register the user if they don't exist
+    if (!registeredUsers[cleanEmail]) {
+        registeredUsers[cleanEmail] = { name: cleanEmail.split('@')[0], email: cleanEmail, joinedAt: new Date() };
+    }
+    
     res.send({ success: true, plan: userSubscriptions[cleanEmail] || "Free" });
   } else {
     res.send({ success: false, error: "Invalid code" });
@@ -170,15 +166,35 @@ app.post("/create-checkout-session", async (req, res) => {
     res.send({ url: mockUrl });
 });
 
-// --- Team Management ---
+// --- Team Management & Users ---
 
-// Get list of all available mock users
+// Register new user (from Google Auth or Dashboard load)
+app.post("/register-user", (req, res) => {
+    const { email, name } = req.body;
+    if (!email) return res.status(400).send({ error: "Email required" });
+    
+    const cleanEmail = email.trim();
+    if (!registeredUsers[cleanEmail]) {
+        registeredUsers[cleanEmail] = { 
+            name: name || cleanEmail.split('@')[0], 
+            email: cleanEmail, 
+            joinedAt: new Date() 
+        };
+        console.log(`Registered new user: ${cleanEmail}`);
+    }
+    
+    res.send({ success: true, user: registeredUsers[cleanEmail] });
+});
+
+// Get list of all registered users
 app.get("/users", (req, res) => {
-    // Generate the user list with their current plan dynamically injected
-    const usersWithPlans = mockUsers.map(u => ({
+    const userList = Object.values(registeredUsers);
+    
+    const usersWithPlans = userList.map(u => ({
         ...u,
         plan: userSubscriptions[u.email] || "Free"
     }));
+    
     res.send({ users: usersWithPlans });
 });
 
