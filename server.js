@@ -38,7 +38,40 @@ const upload = multer({ dest: "uploads/" });
 
 let codes = {}; // store verification codes
 let userSubscriptions = {}; // { email: planName }
+let userUsage = {}; // { email: { count: number, date: string } }
 
+// Helper function to check and update daily limits
+function checkLimit(email, plan) {
+    if (plan === "Pro" || plan === "Team" || plan === "Enterprise") return { allowed: true };
+    
+    const limit = plan === "Basic" ? 500 : 100;
+    const today = new Date().toISOString().split('T')[0];
+
+    
+    // Initialize or reset daily usage
+    if (!userUsage[email] || userUsage[email].date !== today) {
+        userUsage[email] = { count: 0, date: today };
+    }
+    
+    if (userUsage[email].count >= limit) {
+        return { allowed: false, limit };
+    }
+    
+    userUsage[email].count += 1;
+    return { allowed: true, remaining: limit - userUsage[email].count };
+}
+
+// Get appropriate model based on plan
+function getModelForPlan(plan) {
+    if (plan === "Pro" || plan === "Team" || plan === "Enterprise") {
+        return process.env.GROQ_API_KEY ? "llama3-70b-8192" : "gpt-4o";
+    } else if (plan === "Basic") {
+        return process.env.GROQ_API_KEY ? "llama3-8b-8192" : "gpt-4o-mini";
+    } else {
+        // Free tier uses the cheapest/fastest model
+        return process.env.OPENROUTER_API_KEY ? "meta-llama/llama-3-8b-instruct:free" : "gpt-4o-mini";
+    }
+}
 
 // Send verification code
 app.post("/send-code", async (req, res) => {
@@ -129,17 +162,24 @@ app.post("/create-checkout-session", async (req, res) => {
 // Chatbot integration
 app.post("/chat", async (req, res) => {
   try {
-    const { message } = req.body;
+    const { message, email } = req.body;
     if (!message) return res.status(400).send({ error: "Message is required" });
-
-    // Dynamic Model Selection
-    let modelName = process.env.AI_MODEL || "gpt-4o-mini"; 
     
-    // Fallback logic if AI_MODEL is not set
-    if (!process.env.AI_MODEL) {
-        if (process.env.OPENROUTER_API_KEY) modelName = "meta-llama/llama-3-8b-instruct:free";
-        else if (process.env.GROQ_API_KEY) modelName = "llama3-8b-8192";
+    const userEmail = email ? email.trim() : "guest";
+    const plan = userSubscriptions[userEmail] || "Free";
+    
+    // 1. Enforce Limits
+    const limitStatus = checkLimit(userEmail, plan);
+    if (!limitStatus.allowed) {
+        return res.send({ 
+            error: true, 
+            limitReached: true,
+            reply: `🛑 You have reached your daily limit of ${limitStatus.limit} messages for the ${plan} Plan. Upgrade your plan to continue chatting without limits!` 
+        });
     }
+
+    // 2. Select Model dynamically
+    let modelName = process.env.AI_MODEL || getModelForPlan(plan);
 
     const response = await openai.chat.completions.create({
       model: modelName,
@@ -158,6 +198,17 @@ app.post("/upload", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).send({ error: "No file uploaded" });
+    }
+
+    const email = req.body.email ? req.body.email.trim() : "guest";
+    const plan = userSubscriptions[email] || "Free";
+
+    // Enforce Limits
+    const limitStatus = checkLimit(email, plan);
+    if (!limitStatus.allowed) {
+        return res.send({ 
+            error: `You have reached your daily limit for the ${plan} Plan. Upgrade to continue.`
+        });
     }
 
     const fileName = req.file.originalname;
