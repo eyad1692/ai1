@@ -37,6 +37,7 @@ const openai = new OpenAI({
 const upload = multer({ dest: "uploads/" });
 
 let codes = {}; // store verification codes
+let userSubscriptions = {}; // { email: planName }
 
 
 // Send verification code
@@ -87,10 +88,42 @@ app.post("/verify-code", (req, res) => {
 
   if (codes[cleanEmail] && codes[cleanEmail].toString() === code.toString()) {
     delete codes[cleanEmail]; // Clear code after use
-    res.send({ success: true });
+    res.send({ success: true, plan: userSubscriptions[cleanEmail] || "Free" });
   } else {
     res.send({ success: false, error: "Invalid code" });
   }
+});
+
+// --- Subscription Management ---
+
+// Get current user plan
+app.post("/get-plan", (req, res) => {
+    const { email } = req.body;
+    if (!email) return res.status(400).send({ error: "Email required" });
+    const plan = userSubscriptions[email.trim()] || "Free";
+    res.send({ plan });
+});
+
+// Update user plan (Simulated Checkout Success)
+app.post("/update-plan", (req, res) => {
+    const { email, plan } = req.body;
+    if (!email || !plan) return res.status(400).send({ error: "Data missing" });
+    
+    console.log(`Upgrading ${email} to ${plan} plan`);
+    userSubscriptions[email.trim()] = plan;
+    res.send({ success: true, plan });
+});
+
+// Create Stripe Checkout Session (Mockup)
+app.post("/create-checkout-session", async (req, res) => {
+    const { email, plan, priceId } = req.body;
+    
+    // In a real app, you would use stripe.checkout.sessions.create here
+    // For now, we simulate a successful redirect URL
+    const sessionId = "sess_" + Math.random().toString(36).substring(7);
+    const mockUrl = `https://thinkerai2.netlify.app/dashboard.html?session_id=${sessionId}&success=true&plan=${plan}`;
+    
+    res.send({ url: mockUrl });
 });
 
 // Chatbot integration
