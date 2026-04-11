@@ -40,6 +40,17 @@ let codes = {}; // store verification codes
 let userSubscriptions = {}; // { email: planName }
 let userUsage = {}; // { email: { count: number, date: string } }
 
+// Mock Database of Registered Users (to simulate being able to add team members)
+const mockUsers = [
+    { email: "john@example.com", name: "John Doe" },
+    { email: "sarah@design.co", name: "Sarah Smith" },
+    { email: "mike.dev@startup.io", name: "Mike Johnson" },
+    { email: "alex@agency.net", name: "Alex Wong" },
+    { email: "emma.marketing@corp.com", name: "Emma Davis" },
+    { email: "dave.ops@tech.io", name: "David Miller" },
+    { email: "olivia.hr@company.com", name: "Olivia Wilson" }
+];
+
 // Helper function to check and update daily limits
 function checkLimit(email, plan) {
     if (plan === "Pro" || plan === "Team" || plan === "Enterprise") return { allowed: true };
@@ -157,6 +168,35 @@ app.post("/create-checkout-session", async (req, res) => {
     const mockUrl = `https://thinkerai2.netlify.app/dashboard.html?session_id=${sessionId}&success=true&plan=${plan}`;
     
     res.send({ url: mockUrl });
+});
+
+// --- Team Management ---
+
+// Get list of all available mock users
+app.get("/users", (req, res) => {
+    // Generate the user list with their current plan dynamically injected
+    const usersWithPlans = mockUsers.map(u => ({
+        ...u,
+        plan: userSubscriptions[u.email] || "Free"
+    }));
+    res.send({ users: usersWithPlans });
+});
+
+// Add a user to a team
+app.post("/add-team-member", (req, res) => {
+    const { ownerEmail, targetEmail } = req.body;
+    
+    // Security check: Only people who actually have a Team plan can add members
+    const ownerPlan = userSubscriptions[ownerEmail];
+    if (ownerPlan !== "Team" && ownerPlan !== "Enterprise") {
+        return res.status(403).send({ error: "Your current plan does not support adding team members. Please upgrade to Team." });
+    }
+    
+    // Give the target user the Team plan
+    userSubscriptions[targetEmail] = "Team";
+    console.log(`${ownerEmail} added ${targetEmail} to their Team.`);
+    
+    res.send({ success: true, message: "Member added successfully!" });
 });
 
 // Chatbot integration
